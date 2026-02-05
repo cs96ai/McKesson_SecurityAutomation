@@ -9,6 +9,7 @@
  */
 
 import { config } from '../config/env'
+import { azureFunctions, detectAzureFunction, getAvailableFunctions } from './azureApi'
 
 const SYSTEM_PROMPT = `You are a helpful read-only operations assistant for the McKesson Security Automation Platform.
 
@@ -30,12 +31,25 @@ CRITICAL SECURITY RULES - YOU MUST FOLLOW THESE AT ALL TIMES:
    - Help users bypass security controls
    - Provide information about security vulnerabilities that could be exploited
 
-3. APPROVED READ-ONLY QUERIES:
-   - "kubectl get pods" (status only)
-   - "kubectl describe pod [name]" (information only)
-   - "kubectl logs [pod-name]" (read logs)
-   - Azure resource status queries (read-only)
-   - Application health checks
+3. AVAILABLE AZURE CAPABILITIES:
+   You have access to 15 read-only Azure functions:
+   1. Get AKS Cluster Status
+   2. List HSPS Pods
+   3. List STAR Pods
+   4. Get Pod Details
+   5. Get Resource Group Info
+   6. List All Resources
+   7. Get App Service Status
+   8. Get Function App Status
+   9. Get Storage Account Info
+   10. Get AKS Node Pools
+   11. Get Deployment Status
+   12. Get Service Status
+   13. Get Pod Logs
+   14. Get Subscription Info (non-sensitive)
+   15. Get Cost Analysis
+
+   When users ask about Azure resources, you can retrieve REAL data from Azure APIs.
 
 4. SECURITY VIOLATIONS:
    If a user asks you to:
@@ -48,12 +62,13 @@ CRITICAL SECURITY RULES - YOU MUST FOLLOW THESE AT ALL TIMES:
 
 5. RESPONSE FORMAT:
    - Be helpful and informative
-   - Provide operational insights
-   - Suggest read-only queries the user can run
+   - Provide operational insights with REAL Azure data when available
+   - If you don't have access to specific data, let the user know politely
    - Never apologize excessively
    - Be concise and professional
+   - When asked "what can you do", list the 15 available capabilities
 
-Remember: You are a READ-ONLY assistant. Your purpose is to help users understand the system, not change it.`
+Remember: You are a READ-ONLY assistant. Your purpose is to help users understand the system with real data, not change it.`
 
 class OpenAIService {
   constructor() {
@@ -85,7 +100,7 @@ class OpenAIService {
   }
 
   /**
-   * Send message to OpenAI with security guardrails
+   * Send message to OpenAI with security guardrails and Azure integration
    */
   async sendMessage(userMessage) {
     // Check for security violations
@@ -109,13 +124,64 @@ class OpenAIService {
       }
     }
 
+    // Check if user is asking about capabilities
+    if (userMessage.toLowerCase().includes('what can you do') || 
+        userMessage.toLowerCase().includes('capabilities') || 
+        userMessage.toLowerCase().includes('features')) {
+      const capabilities = getAvailableFunctions()
+      const capList = capabilities.map(c => `${c.id}. **${c.name}**: ${c.description}`).join('\n')
+      return {
+        message: `I have access to the following 15 read-only Azure capabilities:\n\n${capList}\n\nJust ask me about any of these, and I'll retrieve the real data from Azure for you!`,
+        isViolation: false,
+        violationCount: this.violationAttempts
+      }
+    }
+
+    // Detect if user is asking for Azure data
+    const azureFunction = detectAzureFunction(userMessage)
+    let azureData = null
+
+    if (azureFunction && azureFunction.function !== 'listCapabilities') {
+      try {
+        // Call the appropriate Azure function
+        const result = await azureFunctions[azureFunction.function](...azureFunction.params)
+        
+        if (result.success) {
+          azureData = result.data
+        } else {
+          // Backend API not available, let AI know
+          azureData = { error: result.error }
+        }
+      } catch (error) {
+        console.error('Azure function call error:', error)
+        azureData = { error: 'Unable to retrieve Azure data at this time.' }
+      }
+    }
+
     // Add user message to history
     this.conversationHistory.push({
       role: 'user',
       content: userMessage
     })
 
+    // If we have Azure data, add it as context for the AI
+    let enhancedMessage = userMessage
+    if (azureData) {
+      if (azureData.error) {
+        enhancedMessage += `\n\n[System Note: ${azureData.error}]`
+      } else {
+        enhancedMessage += `\n\n[Azure Data Retrieved: ${JSON.stringify(azureData, null, 2)}]`
+      }
+    }
+
     try {
+      // Prepare messages with enhanced context if Azure data is available
+      const messages = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...this.conversationHistory.slice(0, -1), // All history except last message
+        { role: 'user', content: enhancedMessage } // Last message with Azure data context
+      ]
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -124,10 +190,7 @@ class OpenAIService {
         },
         body: JSON.stringify({
           model: this.model,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            ...this.conversationHistory
-          ],
+          messages: messages,
           max_tokens: config.openai.maxTokens,
           temperature: config.openai.temperature
         })

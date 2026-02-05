@@ -112,6 +112,8 @@ Empower teams with automated security tools:
 **EXTREME SECURITY MODE** - Read-only AI assistant with multiple security layers:
 
 - **OpenAI GPT-4 Integration**: Natural language queries about system status
+- **15 Read-Only Azure Capabilities**: Retrieves REAL data from Azure APIs
+- **Backend API Service**: All Azure calls happen server-side (Node.js/Express)
 - **Strict Read-Only Enforcement**: AI cannot modify, delete, or scale infrastructure
 - **Security Violation Detection**: Monitors and blocks unauthorized requests
 - **Hidden Violation Counter**: Tracks attempts to bypass security (max 3)
@@ -119,12 +121,31 @@ Empower teams with automated security tools:
 - **Azure Read-Only Access**: Service principal with Reader role only
 - **Zero Credential Exposure**: Never provides API keys, secrets, or sensitive data
 
+**15 Azure Capabilities**:
+1. Get AKS Cluster Status
+2. List HSPS Pods
+3. List STAR Pods
+4. Get Pod Details
+5. Get Resource Group Info
+6. List All Resources
+7. Get App Service Status
+8. Get Function App Status
+9. Get Storage Account Info
+10. Get AKS Node Pools
+11. Get Deployment Status
+12. Get Service Status
+13. Get Pod Logs
+14. Get Subscription Info
+15. Get Cost Analysis
+
 **Security Layers**:
 1. Client-side pattern detection (destructive commands, credential requests)
 2. OpenAI system prompt guardrails (read-only instructions)
-3. Azure RBAC (Reader role - physical access control)
+3. Backend API authentication (Bearer token)
+4. Azure RBAC (Reader role - physical access control)
 
-See [CHATOPS-SECURITY-SETUP.md](CHATOPS-SECURITY-SETUP.md) for detailed security configuration.
+See [CHATOPS-SECURITY-SETUP.md](CHATOPS-SECURITY-SETUP.md) for security configuration.
+See [CHATOPS-AZURE-CAPABILITIES.md](CHATOPS-AZURE-CAPABILITIES.md) for all 15 capabilities.
 
 - **Log Analysis**: Automated log parsing and threat detection
 - **Backup Verification**: Automated backup integrity checks
