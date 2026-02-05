@@ -45,8 +45,8 @@
                   CA
                 </div>
                 <div>
-                  <p class="text-sm font-medium text-gray-900 dark:text-white">CyberAuto Bot</p>
-                  <p class="text-xs text-green-600 dark:text-green-400">● Online</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">Security Operations Assistant</p>
+                  <p class="text-xs text-green-600 dark:text-green-400">● Online (Read-Only Mode)</p>
                 </div>
               </div>
             </div>
@@ -66,7 +66,7 @@
                   v-model="chatMessage"
                   @keyup.enter="sendChatMessage"
                   type="text"
-                  placeholder="Type a message... (e.g., 'triage alert #8932', 'block IP 10.0.0.5')"
+                  placeholder="Ask about system status, pod health, or operations... (Read-only queries only)"
                   class="input-field flex-1"
                   :disabled="executing"
                 />
@@ -164,8 +164,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
+import { openAIService } from '../services/openai'
+import { validateConfig } from '../config/env'
 
 const toast = useToast()
 
@@ -178,8 +180,9 @@ const terminalOutput = ref([
 
 const chatMessage = ref('')
 const chatMessages = ref([
-  { sender: 'bot', text: 'Hello! I\'m CyberAuto Bot. How can I help you today?', time: '10:00 AM' }
+  { sender: 'bot', text: 'Hello! I\'m your read-only operations assistant. I can help you check the status of applications, pods, and Azure resources. What would you like to know?', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
 ])
+const aiEnabled = ref(false)
 
 const recentActions = ref([
   { id: 1, action: 'Triage Alert #8932', status: 'Success', timestamp: '2 minutes ago' },
@@ -260,7 +263,7 @@ function executeCommand() {
   }, 500)
 }
 
-function sendChatMessage() {
+async function sendChatMessage() {
   if (!chatMessage.value.trim()) return
 
   const userMessage = chatMessage.value
@@ -273,27 +276,57 @@ function sendChatMessage() {
   chatMessage.value = ''
   executing.value = true
 
-  setTimeout(() => {
-    let response = 'I\'ve processed your request. '
-    
-    if (userMessage.toLowerCase().includes('triage')) {
-      response += 'Alert has been triaged and enriched with threat intelligence. Risk score: High. Recommended action: Isolate endpoint.'
-    } else if (userMessage.toLowerCase().includes('block')) {
-      response += 'IP address has been blocked on the firewall. Monitoring alert created.'
-    } else if (userMessage.toLowerCase().includes('isolate')) {
-      response += 'Endpoint has been isolated from the network. Evidence collection initiated.'
-    } else {
-      response += 'Action completed successfully. Check the audit log for details.'
-    }
+  try {
+    if (aiEnabled.value) {
+      // Use OpenAI with security guardrails
+      const response = await openAIService.sendMessage(userMessage)
+      
+      chatMessages.value.push({
+        sender: 'bot',
+        text: response.message,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      })
 
+      // If chat was reset due to security violations, show warning
+      if (response.isReset) {
+        toast.error('Security violation limit reached. Chat has been reset.')
+        // Clear chat history after a delay
+        setTimeout(() => {
+          chatMessages.value = [
+            { sender: 'bot', text: 'Hello! I\'m your read-only operations assistant. I can help you check the status of applications, pods, and Azure resources. What would you like to know?', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+          ]
+        }, 2000)
+      } else if (response.isViolation) {
+        toast.warning(`Security violation detected (${response.violationCount}/3)`)
+      }
+    } else {
+      // Fallback to simulated responses
+      let response = 'I\'ve processed your request. '
+      
+      if (userMessage.toLowerCase().includes('status') || userMessage.toLowerCase().includes('pods')) {
+        response = 'To check pod status, you can run: kubectl get pods -n hsps or kubectl get pods -n star'
+      } else if (userMessage.toLowerCase().includes('help')) {
+        response = 'I can help you with read-only queries about: pod status, application health, Azure resource status, and operational metrics. What would you like to know?'
+      } else {
+        response = 'OpenAI integration is not configured. Please set VITE_OPENAI_API_KEY in your .env file to enable AI-powered responses.'
+      }
+
+      chatMessages.value.push({
+        sender: 'bot',
+        text: response,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      })
+    }
+  } catch (error) {
+    console.error('Chat error:', error)
     chatMessages.value.push({
       sender: 'bot',
-      text: response,
+      text: 'I apologize, but I encountered an error. Please try again.',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     })
-
+  } finally {
     executing.value = false
-  }, 1000)
+  }
 }
 
 function executeQuickAction(action) {
@@ -314,4 +347,12 @@ function executeQuickAction(action) {
     toast.success(`${action} completed successfully`)
   }, 1500)
 }
+
+// Initialize on mount
+onMounted(() => {
+  aiEnabled.value = validateConfig()
+  if (!aiEnabled.value) {
+    console.warn('OpenAI integration not configured. Using fallback responses.')
+  }
+})
 </script>

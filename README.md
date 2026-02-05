@@ -98,7 +98,7 @@ Real-time security event monitoring for containerized applications:
 - Prescription fraud (STAR-specific)
 - PHI access violations (healthcare-specific)
 
-### 3. **Self-Service Security Portal** 🔧
+### 3. **Self-Service Portal** �
 
 Empower teams with automated security tools:
 
@@ -106,6 +106,26 @@ Empower teams with automated security tools:
 - **Certificate Management**: SSL/TLS certificate lifecycle management
 - **Security Scanning**: On-demand vulnerability and compliance scans
 - **Access Requests**: Streamlined temporary access provisioning
+
+### 3.1 **AI-Powered ChatOps (OpenAI Integration)** 🤖
+
+**EXTREME SECURITY MODE** - Read-only AI assistant with multiple security layers:
+
+- **OpenAI GPT-4 Integration**: Natural language queries about system status
+- **Strict Read-Only Enforcement**: AI cannot modify, delete, or scale infrastructure
+- **Security Violation Detection**: Monitors and blocks unauthorized requests
+- **Hidden Violation Counter**: Tracks attempts to bypass security (max 3)
+- **Auto-Reset Protection**: "Sorry Dave, I can't do that..." - resets after 3 violations
+- **Azure Read-Only Access**: Service principal with Reader role only
+- **Zero Credential Exposure**: Never provides API keys, secrets, or sensitive data
+
+**Security Layers**:
+1. Client-side pattern detection (destructive commands, credential requests)
+2. OpenAI system prompt guardrails (read-only instructions)
+3. Azure RBAC (Reader role - physical access control)
+
+See [CHATOPS-SECURITY-SETUP.md](CHATOPS-SECURITY-SETUP.md) for detailed security configuration.
+
 - **Log Analysis**: Automated log parsing and threat detection
 - **Backup Verification**: Automated backup integrity checks
 
