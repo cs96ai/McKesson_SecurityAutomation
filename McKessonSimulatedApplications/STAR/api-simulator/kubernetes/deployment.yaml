@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hsps-api-simulator
+  namespace: hsps
+  labels:
+    app: hsps-api-simulator
+    component: api
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hsps-api-simulator
+  template:
+    metadata:
+      labels:
+        app: hsps-api-simulator
+        component: api
+        tier: backend
+    spec:
+      serviceAccountName: hsps-api-sa
+      containers:
+      - name: api-simulator
+        image: hspsdemo6478.azurecr.io/hsps-api-simulator:1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: APP_NAME
+          value: "hsps-api"
+        - name: APP_TYPE
+          value: "api"
+        - name: SECURITY_PORTAL_URL
+          valueFrom:
+            configMapKeyRef:
+              name: hsps-config
+              key: security_portal_url
+        - name: BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hsps-secrets
+              key: bearer_token
+        - name: ANOMALY_FREQUENCY
+          valueFrom:
+            configMapKeyRef:
+              name: hsps-config
+              key: anomaly_frequency
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: hsps-config
+              key: log_level
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+

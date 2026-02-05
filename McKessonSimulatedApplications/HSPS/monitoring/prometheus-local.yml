@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'hsps-local'
+    environment: 'local'
+
+scrape_configs:
+  - job_name: 'security-portal'
+    static_configs:
+      - targets: ['security-portal:8000']
+        labels:
+          app: 'security-portal'
+
+  - job_name: 'database-simulator'
+    static_configs:
+      - targets: ['database-simulator:8000']
+        labels:
+          app: 'hsps-database-simulator'
+
+  - job_name: 'api-simulator'
+    static_configs:
+      - targets: ['api-simulator:8000']
+        labels:
+          app: 'hsps-api-simulator'
+
+  - job_name: 'webui-simulator'
+    static_configs:
+      - targets: ['webui-simulator:8000']
+        labels:
+          app: 'hsps-webui-simulator'

@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  security-portal:
+    build: ./security-portal
+    ports:
+      - "8000:8000"
+    environment:
+      - BEARER_TOKEN=hsps-secure-token-change-in-production-12345
+      - LOG_LEVEL=INFO
+    networks:
+      - hsps-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  database-simulator:
+    build: ./database-simulator
+    ports:
+      - "8001:8000"
+    environment:
+      - APP_NAME=hsps-database
+      - APP_TYPE=database
+      - SECURITY_PORTAL_URL=http://security-portal:8000
+      - BEARER_TOKEN=hsps-secure-token-change-in-production-12345
+      - ANOMALY_FREQUENCY=0.15
+      - LOG_LEVEL=INFO
+      - NAMESPACE=local
+      - POD_NAME=database-simulator-local
+      - NODE_NAME=localhost
+      - POD_IP=172.18.0.2
+    depends_on:
+      - security-portal
+    networks:
+      - hsps-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-simulator:
+    build: ./api-simulator
+    ports:
+      - "8002:8000"
+    environment:
+      - APP_NAME=hsps-api
+      - APP_TYPE=api
+      - SECURITY_PORTAL_URL=http://security-portal:8000
+      - BEARER_TOKEN=hsps-secure-token-change-in-production-12345
+      - ANOMALY_FREQUENCY=0.15
+      - LOG_LEVEL=INFO
+      - NAMESPACE=local
+      - POD_NAME=api-simulator-local
+      - NODE_NAME=localhost
+      - POD_IP=172.18.0.3
+    depends_on:
+      - security-portal
+    networks:
+      - hsps-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  webui-simulator:
+    build: ./webui-simulator
+    ports:
+      - "8003:8000"
+    environment:
+      - APP_NAME=hsps-webui
+      - APP_TYPE=webui
+      - SECURITY_PORTAL_URL=http://security-portal:8000
+      - BEARER_TOKEN=hsps-secure-token-change-in-production-12345
+      - ANOMALY_FREQUENCY=0.15
+      - LOG_LEVEL=INFO
+      - NAMESPACE=local
+      - POD_NAME=webui-simulator-local
+      - NODE_NAME=localhost
+      - POD_IP=172.18.0.4
+    depends_on:
+      - security-portal
+    networks:
+      - hsps-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-local.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - hsps-network
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - hsps-network
+
+networks:
+  hsps-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:

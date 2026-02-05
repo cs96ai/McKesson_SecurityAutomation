@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-portal
+  namespace: hsps
+  labels:
+    app: security-portal
+    component: portal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: security-portal
+  template:
+    metadata:
+      labels:
+        app: security-portal
+        component: portal
+    spec:
+      serviceAccountName: security-portal-sa
+      containers:
+      - name: security-portal
+        image: hspsdemo6478.azurecr.io/security-portal:1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hsps-secrets
+              key: bearer_token
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: hsps-config
+              key: log_level
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+

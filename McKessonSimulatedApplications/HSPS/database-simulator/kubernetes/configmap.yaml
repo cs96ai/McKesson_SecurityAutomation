@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hsps-config
+  namespace: hsps
+data:
+  security_portal_url: "http://security-portal:8000"
+  anomaly_frequency: "0.15"
+  log_level: "INFO"

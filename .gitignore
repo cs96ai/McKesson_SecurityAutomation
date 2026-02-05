@@ -1,0 +1,89 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+*.zip
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Azure and deployment
+*.publishsettings
+*.azurePubxml
+local.settings.json
+.azure/
+
+# PowerShell
+*.ps1xml
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Azure Functions
+__blobstorage__/
+__queuestorage__/
+__azurite_db*__.json
+.python_packages/
+
+# Secrets and credentials
+*.pem
+*.key
+*.cert
+secrets/
+credentials/
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Compiled files
+*.dll
+*.exe
+*.out
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+*.tar.gz
+*.rar
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Vue/Vite specific
+.vite/
+*.local
+
+# Kubernetes configs with secrets
+*-secret.yaml
+kubeconfig
+
+# Backup files
+*.bak
+*.backup
