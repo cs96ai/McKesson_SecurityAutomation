@@ -1,4 +1,4 @@
-# Cyber Automation Platform - Vue 3 SPA
+# McKesson Security Automation - Vue 3 SPA
 
 A comprehensive single-page application for managing enterprise IT infrastructure cybersecurity automation, built with Vue 3, Pinia, and Tailwind CSS.
 
