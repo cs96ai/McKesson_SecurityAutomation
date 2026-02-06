@@ -176,6 +176,7 @@
             type="text" 
             class="form-input w-full"
             placeholder="http://localhost:8000"
+            autocomplete="off"
           >
           <p class="text-xs text-gray-500 mt-1">Run: kubectl port-forward -n hsps svc/security-portal 8000:8000</p>
         </div>
@@ -186,6 +187,7 @@
             type="password" 
             class="form-input w-full"
             placeholder="your-secret-token-123"
+            autocomplete="new-password"
           >
           <p class="text-xs text-gray-500 mt-1">Default: your-secret-token-123</p>
         </div>
@@ -644,8 +646,22 @@ onUnmounted(() => {
 
 .loading-container {
   text-align: center;
-  max-width: 500px;
+  width: 500px;
   padding: 2rem;
+}
+
+.loading-container h2 {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-container p {
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .loading-spinner {

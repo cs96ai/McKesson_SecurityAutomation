@@ -1,6 +1,6 @@
 # Kubernetes Pod Auto-Shutdown
 
-This script automatically stops Kubernetes pods after 15 minutes to prevent excessive Azure costs.
+This script automatically stops Kubernetes pods after 15 minutes for resource management.
 
 ## Overview
 
@@ -67,12 +67,12 @@ With custom parameters:
 - star-webui-simulator
 - security-portal
 
-## Cost Savings
+## Benefits
 
 By automatically stopping pods after 15 minutes:
-- **Compute costs**: Reduced by ~95% (only running during active demos)
-- **Storage costs**: Minimal impact (persistent volumes remain)
-- **Network costs**: Reduced egress charges
+- **Resource Management**: Pods only run during active demos
+- **Storage**: Persistent volumes remain available
+- **Network**: Reduced egress traffic
 
 ## Prerequisites
 
@@ -86,7 +86,7 @@ By automatically stopping pods after 15 minutes:
 ### Change Timeout Duration
 
 ```powershell
-.\auto-shutdown-pods.ps1 -TimeoutMinutes 30  # 30 minutes instead of 15
+.\auto-shutdown-pods.ps1 -TimeoutMinutes 30  # 30 minutes 
 ```
 
 ### Add Additional Namespaces

@@ -50,31 +50,68 @@
                 </div>
               </div>
             </div>
-            
-            <div class="p-4 space-y-4 max-h-96 overflow-y-auto">
-              <div v-for="(message, index) in chatMessages" :key="index" :class="message.sender === 'user' ? 'flex justify-end' : 'flex justify-start'">
-                <div :class="message.sender === 'user' ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'" class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
-                  <p class="text-sm">{{ message.text }}</p>
-                  <p class="text-xs mt-1 opacity-70">{{ message.time }}</p>
-                </div>
-              </div>
-            </div>
 
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-              <div class="flex space-x-2">
-                <input
-                  v-model="chatMessage"
-                  @keyup.enter="sendChatMessage"
-                  type="text"
-                  placeholder="Ask about system status, pod health, or operations... (Read-only queries only)"
-                  class="input-field flex-1"
+            <div class="flex">
+              <!-- Quick-ask sidebar -->
+              <div class="w-48 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3 space-y-2">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Tell me about...</p>
+                <button v-for="q in quickQuestions" :key="q.label"
+                  @click="askQuickQuestion(q.prompt)"
                   :disabled="executing"
-                />
-                <button @click="sendChatMessage" :disabled="executing" class="btn-primary">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
+                  class="w-full text-left text-xs px-2.5 py-2 rounded-md transition-colors
+                    bg-white dark:bg-gray-700 hover:bg-primary-50 dark:hover:bg-primary-900/30
+                    border border-gray-200 dark:border-gray-600 hover:border-primary-400
+                    text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed">
+                  {{ q.label }}
                 </button>
+              </div>
+
+              <!-- Chat area -->
+              <div class="flex-1 min-w-0 flex flex-col">
+                <div ref="chatContainer" class="p-4 space-y-4 max-h-[32rem] overflow-y-auto">
+                  <div v-for="(message, index) in chatMessages" :key="index" :class="message.sender === 'user' ? 'flex justify-end' : 'flex justify-start'">
+                    <div v-if="message.sender === 'user'" class="bg-primary-600 text-white max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
+                      <p class="text-sm whitespace-pre-wrap">{{ message.text }}</p>
+                      <p class="text-xs mt-1 opacity-70">{{ message.time }}</p>
+                    </div>
+                    <div v-else class="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-lg chat-bot-message" style="max-width: 90%;">
+                      <div class="text-sm chat-html-content" v-html="message.html || message.text"></div>
+                      <p v-if="message.tools && message.tools.length" class="text-xs mt-1 opacity-50">🔧 {{ message.tools.join(', ') }}</p>
+                      <p class="text-xs mt-1 opacity-70">{{ message.time }}</p>
+                    </div>
+                  </div>
+                  <!-- Loading indicator -->
+                  <div v-if="executing" class="flex justify-start">
+                    <div class="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-3 rounded-lg">
+                      <div class="flex items-center space-x-2">
+                        <div class="flex space-x-1">
+                          <div class="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                          <div class="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                          <div class="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                        </div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Retrieving data from Azure...</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                  <div class="flex space-x-2">
+                    <input
+                      v-model="chatMessage"
+                      @keyup.enter="sendChatMessage"
+                      type="text"
+                      placeholder="Ask about system status, pod health, or operations..."
+                      class="input-field flex-1"
+                      :disabled="executing"
+                    />
+                    <button @click="sendChatMessage" :disabled="executing" class="btn-primary">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -164,10 +201,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useToast } from 'vue-toastification'
-import { openAIService } from '../services/openai'
-import { validateConfig } from '../config/env'
+import { config } from '../config/env'
 
 const toast = useToast()
 
@@ -179,10 +215,25 @@ const terminalOutput = ref([
 ])
 
 const chatMessage = ref('')
+const chatContainer = ref(null)
 const chatMessages = ref([
-  { sender: 'bot', text: 'Hello! I\'m your read-only operations assistant. I can help you check the status of applications, pods, and Azure resources. What would you like to know?', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+  { sender: 'bot', text: 'Hello! I\'m your read-only operations assistant. I can help you check the status of applications, pods, and Azure resources. Use the buttons on the left or type a question below.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
 ])
-const aiEnabled = ref(false)
+const chatHistory = ref([])
+
+const quickQuestions = [
+  { label: 'AKS Cluster Status', prompt: 'What is the current status of the AKS cluster?' },
+  { label: 'HSPS Pods', prompt: 'List all pods running in the HSPS namespace' },
+  { label: 'STAR Pods', prompt: 'List all pods running in the STAR namespace' },
+  { label: 'HSPS Deployments', prompt: 'Show the deployment status in the HSPS namespace' },
+  { label: 'STAR Deployments', prompt: 'Show the deployment status in the STAR namespace' },
+  { label: 'All Azure Resources', prompt: 'List all Azure resources in the resource group' },
+  { label: 'Node Pools', prompt: 'Show me the AKS node pool information' },
+  { label: 'App Service', prompt: 'What is the status of the App Service?' },
+  { label: 'Function App', prompt: 'What is the status of the Function App?' },
+  { label: 'HSPS Services', prompt: 'Show the Kubernetes services in the HSPS namespace' },
+  { label: 'Subscription Info', prompt: 'Show me the Azure subscription information' },
+]
 
 const recentActions = ref([
   { id: 1, action: 'Triage Alert #8932', status: 'Success', timestamp: '2 minutes ago' },
@@ -263,8 +314,21 @@ function executeCommand() {
   }, 500)
 }
 
+function scrollToBottom() {
+  nextTick(() => {
+    if (chatContainer.value) {
+      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+    }
+  })
+}
+
+function askQuickQuestion(prompt) {
+  chatMessage.value = prompt
+  sendChatMessage()
+}
+
 async function sendChatMessage() {
-  if (!chatMessage.value.trim()) return
+  if (!chatMessage.value.trim() || executing.value) return
 
   const userMessage = chatMessage.value
   chatMessages.value.push({
@@ -275,57 +339,56 @@ async function sendChatMessage() {
 
   chatMessage.value = ''
   executing.value = true
+  scrollToBottom()
 
   try {
-    if (aiEnabled.value) {
-      // Use OpenAI with security guardrails
-      const response = await openAIService.sendMessage(userMessage)
-      
-      chatMessages.value.push({
-        sender: 'bot',
-        text: response.message,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      })
+    const backendUrl = config.portal.url || 'http://localhost:8000'
+    const bearerToken = config.portal.bearerToken || 'your-secret-token-123'
 
-      // If chat was reset due to security violations, show warning
-      if (response.isReset) {
-        toast.error('Security violation limit reached. Chat has been reset.')
-        // Clear chat history after a delay
-        setTimeout(() => {
-          chatMessages.value = [
-            { sender: 'bot', text: 'Hello! I\'m your read-only operations assistant. I can help you check the status of applications, pods, and Azure resources. What would you like to know?', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-          ]
-        }, 2000)
-      } else if (response.isViolation) {
-        toast.warning(`Security violation detected (${response.violationCount}/3)`)
-      }
-    } else {
-      // Fallback to simulated responses
-      let response = 'I\'ve processed your request. '
-      
-      if (userMessage.toLowerCase().includes('status') || userMessage.toLowerCase().includes('pods')) {
-        response = 'To check pod status, you can run: kubectl get pods -n hsps or kubectl get pods -n star'
-      } else if (userMessage.toLowerCase().includes('help')) {
-        response = 'I can help you with read-only queries about: pod status, application health, Azure resource status, and operational metrics. What would you like to know?'
-      } else {
-        response = 'OpenAI integration is not configured. Please set VITE_OPENAI_API_KEY in your .env file to enable AI-powered responses.'
-      }
-
-      chatMessages.value.push({
-        sender: 'bot',
-        text: response,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const response = await fetch(`${backendUrl}/api/agent/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${bearerToken}`
+      },
+      body: JSON.stringify({
+        message: userMessage,
+        history: chatHistory.value.slice(-20)
       })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.detail || `API error: ${response.status}`)
     }
+
+    const data = await response.json()
+
+    // Track conversation history for context
+    chatHistory.value.push({ role: 'user', content: userMessage })
+    chatHistory.value.push({ role: 'assistant', content: data.response })
+
+    // The response may contain HTML (tables, lists) from OpenAI
+    const responseText = data.response || ''
+    const hasHtml = /<\s*(table|ul|ol|div|br|strong|em|p)\b/i.test(responseText)
+
+    chatMessages.value.push({
+      sender: 'bot',
+      text: hasHtml ? '' : responseText,
+      html: hasHtml ? responseText : null,
+      tools: data.tool_calls_made || [],
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    })
   } catch (error) {
     console.error('Chat error:', error)
     chatMessages.value.push({
       sender: 'bot',
-      text: 'I apologize, but I encountered an error. Please try again.',
+      text: `Error: ${error.message}. Please check that the backend API is running.`,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     })
   } finally {
     executing.value = false
+    scrollToBottom()
   }
 }
 
@@ -350,9 +413,6 @@ function executeQuickAction(action) {
 
 // Initialize on mount
 onMounted(() => {
-  aiEnabled.value = validateConfig()
-  if (!aiEnabled.value) {
-    console.warn('OpenAI integration not configured. Using fallback responses.')
-  }
+  console.log('ChatOps initialized. Backend URL:', config.portal.url || 'http://localhost:8000')
 })
 </script>

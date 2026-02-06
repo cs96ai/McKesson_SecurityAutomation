@@ -28,7 +28,7 @@ Your Azure Function with Timer Trigger has been successfully deployed and config
 
 ### **4. Managed Identity & Permissions**
 - **System-Assigned Identity**: Enabled
-- **Principal ID**: `0d650d30-f968-47f0-9ea8-27ca60c289e0`
+- **Principal ID**: `0d650*****`
 - **Roles Assigned**:
   - Azure Kubernetes Service Cluster User Role (on AKS cluster)
   - Contributor (on resource group)
@@ -55,20 +55,6 @@ Your Azure Function with Timer Trigger has been successfully deployed and config
 - `star-api-simulator`
 - `star-webui-simulator`
 - `security-portal`
-
----
-
-## 💰 Cost Analysis
-
-### **Azure Function Costs**
-- **First 1 million executions**: FREE
-- **Your usage**: ~8,640 executions/month (every 5 min)
-- **Monthly cost**: **$0.00** ✅
-
-### **Savings from Auto-Shutdown**
-- **Without auto-shutdown**: ~$150-200/month (pods running 24/7)
-- **With auto-shutdown**: ~$5-10/month (pods running only during demos)
-- **Monthly savings**: **~$140-190** 💰
 
 ---
 
@@ -181,8 +167,8 @@ If you see "Forbidden" or "Unauthorized" errors:
 # Verify managed identity is enabled
 az functionapp identity show --resource-group hsps-demo-rg --name hsps-pod-shutdown
 
-# Re-assign permissions
-az role assignment create --assignee 0d650d30-f968-47f0-9ea8-27ca60c289e0 --role "Contributor" --scope /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/hsps-demo-rg
+# Re-assign permissions (use the Principal ID from the identity show command)
+az role assignment create --assignee <PRINCIPAL_ID> --role "Contributor" --scope /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/hsps-demo-rg
 ```
 
 ### **Pods Not Scaling Down**
@@ -213,7 +199,6 @@ c:\code\McKesson_DevSecAutomation\azure-function-pod-shutdown\
 1. ✅ **Monitor First Execution**: Check logs after 5 minutes
 2. ✅ **Verify Pod Shutdown**: Ensure pods are scaled down after 15 minutes
 3. ✅ **Set Up Alerts**: Configure alerts for function failures (optional)
-4. ✅ **Review Costs**: Monitor Azure costs to confirm savings
 
 ---
 
@@ -232,7 +217,5 @@ Your Azure Function is now:
 - ✅ Scheduled to run every 5 minutes
 - ✅ Monitoring HSPS and STAR pods
 - ✅ Auto-scaling down deployments after 15 minutes
-- ✅ Saving you ~$140-190/month
-- ✅ Costing you $0/month (within free tier)
 
-**The auto-shutdown system is now live and protecting your Azure budget!** 🎉
+**The auto-shutdown system is now live and managing your pod lifecycle!** 🎉
